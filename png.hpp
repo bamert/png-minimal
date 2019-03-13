@@ -10,6 +10,11 @@ struct Image{
   int bits=-1;
   int channels=-1;
   std::vector<uint16_t> data;
+  bool isValid(void){
+    return (channels > 0 && height > 0 && width > 0 && (bits == 8 || bits == 16) &&
+        ( (channels == 1 && data.size() == width * height)
+          || (channels == 3 && data.size() == width * height * 3) ));
+  }
 };
 Image readPNG(std::string filename) {
   unsigned char header[8];    
@@ -60,7 +65,7 @@ Image readPNG(std::string filename) {
   img.width = png_get_image_width(pngPtr, infoPtr);
   img.height = png_get_image_height(pngPtr, infoPtr);
   colorType = png_get_color_type(pngPtr, infoPtr);
-  bitDepth = png_get_bit_depth(pngPtr, infoPtr);
+  img.bits = png_get_bit_depth(pngPtr, infoPtr);
 
   int numberOfPasses = png_set_interlace_handling(pngPtr);
   png_read_update_info(pngPtr, infoPtr);
@@ -78,8 +83,8 @@ Image readPNG(std::string filename) {
   png_read_image(pngPtr, rowPointers);
 
   fclose(fp);
+  
   //Read image into buffer (row-major)
-
   switch (png_get_color_type(pngPtr, infoPtr)) {
     case PNG_COLOR_TYPE_GRAY: 
        img.channels = 1; 
@@ -99,11 +104,16 @@ Image readPNG(std::string filename) {
        break;
   }
 
-  if (bitDepth == 16 && img.channels == 1) {
-    for (int y = 0; y < img.height; y++) {
-      png_byte* row = rowPointers[y];
-      for (int x = 0; x < img.width; x++) {
-        img.data[img.width*y+x]  = ((uint16_t)row[x * 2] << 8) + row[x * 2 + 1];
+  if (img.bits == 16){
+    if(img.channels != 1) {
+      img.channels = -1;
+      cout << "ERR: 16bits channels are only supported for single channel images" << endl;
+    }else{
+      for (int y = 0; y < img.height; y++) {
+        png_byte* row = rowPointers[y];
+        for (int x = 0; x < img.width; x++) {
+          img.data[img.width*y+x]  = ((uint16_t)row[x * 2] << 8) + row[x * 2 + 1];
+        }
       }
     }
   } else {
@@ -129,13 +139,21 @@ Image readPNG(std::string filename) {
 }
 void writePNG(Image& img, std::string filename) {
   png_byte colorType;
+  if(!img.isValid()){
+    cout << "ERR: Image not valid" << endl;
+    return;
+  }
+  if(img.bits != 8){
+    cout << "writing  != 8 bit images currently not implemented" << endl;
+    return;
+  }
   if(img.channels == 1){
     colorType = PNG_COLOR_TYPE_GRAY;
   }
   else if(img.channels == 3){
     colorType = PNG_COLOR_TYPE_RGB;
   }
-  png_byte bitDepth = 8;
+  png_byte bitDepth = img.bits;;
 
   png_structp pngPtr;
   png_infop infoPtr;
