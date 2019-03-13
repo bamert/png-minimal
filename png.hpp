@@ -4,18 +4,36 @@
 #include <vector>
 #include <iostream>
 using namespace std;
+
 struct Image{
+  // Image dimensions
   int height=-1;
-  int width=-1;
-  int bits=-1;
-  int channels=-1;
-  std::vector<uint16_t> data;
+  int width=-1; 
+  // 8 or 16
+  int bits=-1; 
+  // 1 or 3(RGB)
+  int channels=-1; 
+  // Row major pixel data. If RGB, R1G1B1R2G2B2...
+  // 8bit data is stored in 16bit type as well. 
+  // Endianness-handling is up to the user.
+  std::vector<uint16_t> data; 
+  
+  // Ensures images has non-zero dimensions and that
+  // the vector length matches those dimensions
   bool isValid(void){
     return (channels > 0 && height > 0 && width > 0 && (bits == 8 || bits == 16) &&
         ( (channels == 1 && data.size() == width * height)
           || (channels == 3 && data.size() == width * height * 3) ));
   }
 };
+
+/**
+ * @brief Reads 8 or 16 bit 1-channel and 8bit 3 channel (RGB) PNG.
+ *
+ * @param filename
+ *
+ * @return the image
+ */
 Image readPNG(std::string filename) {
   unsigned char header[8];    
   png_byte colorType;
@@ -84,7 +102,6 @@ Image readPNG(std::string filename) {
 
   fclose(fp);
   
-  //Read image into buffer (row-major)
   switch (png_get_color_type(pngPtr, infoPtr)) {
     case PNG_COLOR_TYPE_GRAY: 
        img.channels = 1; 
