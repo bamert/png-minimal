@@ -1,5 +1,5 @@
-#ifndef __PNGREAD
-#define __PNGREAD
+#ifndef __PNGWRAPPER
+#define __PNGWRAPPER
 #include <png.h>
 #include <vector>
 #include <iostream>
